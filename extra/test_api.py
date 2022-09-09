@@ -2,20 +2,23 @@ import pymysql
 from app import app
 from config import mysql
 from flask import jsonify, request
-from global_functions import validate_schema
 
+from marshmallow import Schema, fields, ValidationError
+import gladiator as gl
+
+
+# @app.route("/")
+# def main_page():
+#     return "<center><h1>*** API making in progress ***</h1></center>"
+
+def data_validation(_json):
+    if isinstance(_json['brand_name'],str):
+        return True
+    else:
+        return False
 
 conn = mysql.connect()
 cursor = conn.cursor(pymysql.cursors.DictCursor)
-
-brands_schema = {
-    "type":"object",
-    "properties":{
-        "brand_name": {"type":"string"},
-        "brand_id": {"type":"integer"},
-    },
-    'required':['brand_name']
-}
 
 @app.route('/brands', methods=['GET'])
 def view_brand():
@@ -44,52 +47,57 @@ def view_brand_details(id):
      
 
 @app.route('/brands/create', methods=['POST'])
-def create_brand():     
+def create_brand():
     _json = request.json
-    validation_repsonse = validate_schema(_json,brands_schema)
-    if validation_repsonse == None:
-        try:
-            _brand_name = _json['brand_name']
-            if request.method == 'POST':
+    _brand_name = _json['brand_name']
+    field_validations = (
+        ('brand_name',gl.required,gl.type_(str))
+    )
+    result = gl.validate(field_validations,_json)
+    print('value of result is ', result)
+    print('create function running')
+    if result:
+        try:        
+            if _brand_name and request.method == 'POST':
                 sqlQuery = "INSERT INTO brands(brand_name) VALUES(%s)"
                 bindData = (_brand_name)
                 cursor.execute("USE production")		
                 cursor.execute(sqlQuery, bindData)
-                id = cursor.lastrowid
                 conn.commit()
-                response = str(f'Brand added successfully! \nNew generated ID: {id}')
-                return response,200
+                # _jsonr = request.json
+                # _brand_id = _jsonr['brand_id']
+                response = jsonify('Brand added successfully!')
+                response.status_code = 200
+                return response
             else:
-                return "Error due to wrong HTTP method selection"
+                return 'Kindly add relevant inputs and/or request method'
+                # return showMessage()
         except Exception as e:
-            return e
-    elif validation_repsonse != None:
-        return validation_repsonse
+            print(e)
+    else:
+        print('else')
+        return 'Enter valid input'
               
 
 @app.route('/brands/update', methods=['PUT'])
 def update_brand():
+    try:
         _json = request.json
-        validation_response = validate_schema(_json,brands_schema)
         _brand_id = _json['brand_id']
-        if validation_response == None and _brand_id:
-            try:
-                _brand_name = _json['brand_name']
-                if request.method == 'PUT':			
-                    sqlQuery = "UPDATE brands SET brand_name=%s WHERE brand_id=%s"
-                    bindData = (_brand_name, _brand_id)
-                    cursor.execute("USE production")
-                    cursor.execute(sqlQuery, bindData)
-                    conn.commit()
-                    response = jsonify('Brand updated successfully!')
-                    response.status_code = 200
-                    return response
-                else:
-                    return "Error due to wrong HTTP method selection"
-            except Exception as e:
-                return e
-        elif validation_response != None:
-            return validation_response
+        _brand_name = _json['brand_name']
+        if _brand_id and _brand_name and _brand_id and request.method == 'PUT':			
+            sqlQuery = "UPDATE brands SET brand_name=%s WHERE brand_id=%s"
+            bindData = (_brand_name, _brand_id)
+            cursor.execute("USE production")
+            cursor.execute(sqlQuery, bindData)
+            conn.commit()
+            response = jsonify('Brand updated successfully!')
+            response.status_code = 200
+            return response
+        else:
+            return showMessage()
+    except Exception as e:
+        print(e)
      
 
 @app.route('/brands/delete/<int:id>', methods=['DELETE'])
@@ -113,15 +121,4 @@ def showMessage(error=None):
     }
     response = jsonify(message)
     response.status_code = 404
-    return response
-
-
-@app.errorhandler(400)
-def handle_400(e):
-    message = {
-        'status': 400,
-        'message': 'Error in JSON body format'
-    }
-    response = jsonify(message)
-    response.status_code = 400
     return response

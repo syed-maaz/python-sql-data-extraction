@@ -3,6 +3,9 @@ import brand_api
 import category_api
 from app import app
 
+# import test_product
+# import test_api
+
 
 @app.route("/")
 def main_page():

@@ -1,16 +1,22 @@
 import pymysql
 from app import app
 from config import mysql
-from flask import jsonify
-from flask import request
+from flask import jsonify, request
+from global_functions import validate_schema
 
 
-# @app.route("/")
-# def main_page():
-#     return "<center><h1>*** API making in progress ***</h1></center>"
 
 conn = mysql.connect()
 cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+categories_schema = {
+    "type":"object",
+    "properties":{
+        "category name": {"type":"string"},
+        "category_id": {"type":"integer"}
+    },
+    'required':['category_name']
+}
 
 @app.route('/categories', methods=['GET'])
 def view_category():
@@ -40,43 +46,53 @@ def view_category_details(pro_id):
 
 @app.route('/categories/create', methods=['POST'])
 def create_category():
-    try:        
         _json = request.json
-        _category_name = _json['category_name']
-        if _category_name and request.method == 'POST':
-            sqlQuery = "INSERT INTO categories(category_name) VALUES(%s)"
-            bindData = (_category_name)
-            cursor.execute("USE production")		
-            cursor.execute(sqlQuery, bindData)
-            conn.commit()
-            response = jsonify('Category added successfully!')
-            response.status_code = 200
-            return response
-        else:
-            return showMessage()
-    except Exception as e:
-        print(e)
-              
+        validation_response = validate_schema(_json,categories_schema)
+        if validation_response == None:
+            try:
+                _category_name = _json['category_name']
+                if request.method == 'POST':
+                    sqlQuery = "INSERT INTO categories(category_name) VALUES(%s)"
+                    bindData = (_category_name)
+                    cursor.execute("USE production")		
+                    cursor.execute(sqlQuery, bindData)
+                    id = cursor.lastrowid
+                    conn.commit()
+                    response = str(f'Category added successfully! \nNew generated ID: {id}')
+                    return response,200
+                else:
+                    return "Error due to wrong HTTP method selection"
+            except Exception as e:
+                return e
+        elif validation_response != None:
+            return validation_response
+ 
 
 @app.route('/categories/update', methods=['PUT'])
 def update_category():
-    try:
         _json = request.json
+        validation_response = validate_schema(_json, categories_schema)
         _category_id = _json['category_id']
-        _category_name = _json['category_name']	
-        if _category_id and _category_name and request.method == 'PUT':			
-            sqlQuery = "UPDATE categories SET category_name=%s WHERE category_id=%s"
-            bindData = (_category_name,_category_id)
-            cursor.execute("USE production")
-            cursor.execute(sqlQuery, bindData)
-            conn.commit()
-            response = jsonify('Category updated successfully!')
-            response.status_code = 200
-            return response
-        else:
-            return showMessage()
-    except Exception as e:
-        print(e)
+        if validation_response == None and _category_id:
+            try:
+                _category_name = _json['category_name']	
+                if request.method == 'PUT':			
+                    sqlQuery = "UPDATE categories SET category_name=%s WHERE category_id=%s"
+                    bindData = (_category_name,_category_id)
+                    cursor.execute("USE production")
+                    cursor.execute(sqlQuery, bindData)
+                    conn.commit()
+                    response = jsonify('Category updated successfully!')
+                    response.status_code = 200
+                    return response
+                else:
+                    return "Error due to wrong HTTP method selection"
+            except Exception as e:
+                return e
+        elif validation_response != None:
+            return validation_response
+        
+
      
 
 @app.route('/categories/delete/<int:id>', methods=['DELETE'])
@@ -102,3 +118,12 @@ def showMessage(error=None):
     response.status_code = 404
     return response
         
+@app.errorhandler(400)
+def handle_400(e):
+    message = {
+        'status': 400,
+        'message': 'Error in JSON body format'
+    }
+    response = jsonify(message)
+    response.status_code = 400
+    return response

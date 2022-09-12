@@ -33,7 +33,7 @@ def get_product_details(id):
 @app.post('/products')
 def add_product_details():
     er = error_validation(request.get_json(),'products')
-    if er == True:
+    if er == False:
         product = products(product_name=request.json['product_name'],category_id=request.json['category_id'],brand_id=request.json['brand_id'],model_year=request.json['model_year'],list_price=request.json['list_price'])
         db.session.add(product)
         db.session.commit()
@@ -44,7 +44,7 @@ def add_product_details():
 @app.route('/products/<int:id>',methods=['PUT'])
 def modify_product(id):
     er = error_validation(request.get_json(),'products')
-    if er == True:
+    if er == False:
         product = products.query.filter_by(product_id=id).first()
         name=request.json['product_name']
         bid=request.json['brand_id']

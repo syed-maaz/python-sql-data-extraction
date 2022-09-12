@@ -27,7 +27,7 @@ def get_category(id):
 @app.post('/categories')
 def add_category():
     er = error_validation(request.get_json(),'categories')
-    if er == True:
+    if er == False:
         product = categories(category_name=request.json['category_name'])
         db.session.add(product)
         db.session.commit()
@@ -38,12 +38,12 @@ def add_category():
 @app.route('/categories/<int:id>',methods=['PUT'])
 def modify_category(id):
     er = error_validation(request.get_json(),'categories')
-    if er == True:
-        product = categories.query.filter_by(product_id=id).first()
+    if er == False:
+        product = categories.query.filter_by(category_id=id).first()
         name=request.json['category_name']
         product.category_name = name
         db.session.commit()
-        return {"Updated Category":product}
+        return {"Updated Category":product.category_id}
     else:
         return {"Error":422,"Response":er},422
 

@@ -28,7 +28,7 @@ def get_brand(id):
 @app.post('/brands')
 def add_brands():
     er = error_validation(request.get_json(),'brands')
-    if er == True:
+    if er == False:
         product = brands(brand_name=request.json['brand_name'])
         db.session.add(product)
         db.session.commit() 
@@ -39,12 +39,12 @@ def add_brands():
 @app.route('/brands/<int:id>',methods=['PUT'])
 def modify_brand(id):
     er = error_validation(request.get_json(),'brands')
-    if er == True:
-        product = brands.query.filter_by(product_id=id).first()
+    if er == False:
+        product = brands.query.filter_by(brand_id=id).first()
         name=request.json['brand_name']
         product.brand_name = name
         db.session.commit()
-        return {"Updated Brand":product}
+        return {"Updated Brand":product.brand_id}
     else:
         return {"Error":422,"Response":er},422
 

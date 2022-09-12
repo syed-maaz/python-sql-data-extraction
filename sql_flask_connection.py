@@ -51,5 +51,9 @@ def handle_404(e):
     return jsonify({"Error":"404", "Response":" The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again."})
 
 @app.errorhandler(400)
-def handle_404(e):
-    return jsonify({"Error":"400", "Response":" Invalid JSON body request format"})
+def handle_400(e):
+    return jsonify({"Error":"400", "Response":" Invalid JSON body request format. Missing delimiter ',' ,  ';' , ':' or either '{','}' "})
+
+@app.errorhandler(500)
+def handle_500(e):
+    return jsonify({"Error":"500", "Response":"Field names are incorrect "})
